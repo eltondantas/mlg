@@ -1,0 +1,36 @@
+---
+title: "Preço de Venda de Imóveis"
+author: "Elton Dantas de Oliveira Mesquita"
+output:
+  html_document:
+    theme: readable
+    highlight: breezedark
+    toc: true
+    toc_depth: 5
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+---
+
+```{=html}
+<style> body {text-align: justify} </style>
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Introdução
+
+Neste trabalho, vamos modelar o preço de venda de imóveis a partir de dados relativos a uma amostra de 27 imóveis. As variáveis desse conjunto de dados são:
+
+-   ***imposto***: imposto do imóvel (em US\$ 100);
+
+-   ***areaT***: área do terreno (em 1.000 pés quadrados);
+
+-   ***areaC***: área construída (em 1.000 pés quadrados);
+
+-   ***idade***: idade da residência (em anos);
+
+-   ***preco***: preço de venda do imóvel (em US\$ 1.000).
+
+O modelo ajustado será o normal linear com variável resposta ***preço de venda*** e as demais variáveis como explicativas. Em seguida, utilizaremos o método AIC para selecionar as variáveis explicativas, faremos uma análise de diagnóstico com o modelo selecionado e interpretaremos os coeficientes estimados.
