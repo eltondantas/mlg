@@ -34,3 +34,27 @@ Neste trabalho, vamos modelar o preço de venda de imóveis a partir de dados re
 -   ***preco***: preço de venda do imóvel (em US\$ 1.000).
 
 O modelo ajustado será o normal linear com variável resposta ***preço de venda*** e as demais variáveis como explicativas. Em seguida, utilizaremos o método AIC para selecionar as variáveis explicativas, faremos uma análise de diagnóstico com o modelo selecionado e interpretaremos os coeficientes estimados.
+
+### Pacotes
+
+```{r}
+library(tidyverse)
+```
+
+### Os dados
+
+```{r}
+
+dados = as.data.frame(read.table("imoveis.dat"))
+
+
+
+dados = dados %>% rename(imposto = V1,
+                         areaT = V2,
+                         areaC = V3,
+                         idade = V4,
+                         preco = V5)
+
+dados
+head(dados,n = 5)
+```
