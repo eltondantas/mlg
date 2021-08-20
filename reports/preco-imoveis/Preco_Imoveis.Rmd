@@ -17,6 +17,8 @@ output:
 ```
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(rmarkdown); pandoc_version()
 ```
 
 ### Introdução
@@ -39,15 +41,13 @@ O modelo ajustado será o normal linear com variável resposta ***preço de vend
 
 ```{r}
 library(tidyverse)
+library(plotly)
 ```
 
 ### Os dados
 
 ```{r}
-
-dados = as.data.frame(read.table("imoveis.dat"))
-
-
+dados = read.table("imoveis.dat")
 
 dados = dados %>% rename(imposto = V1,
                          areaT = V2,
@@ -55,6 +55,18 @@ dados = dados %>% rename(imposto = V1,
                          idade = V4,
                          preco = V5)
 
-dados
-head(dados,n = 5)
+attach(dados)
+
+plot_ly(type = "box") %>%
+  add_boxplot(y = imposto, name = "imposto") %>% 
+  add_boxplot(y = areaT, name = "área do terreno") %>% 
+  add_boxplot(y = areaC, name = "área construída") %>%
+  add_boxplot(y = idade, name = "idade do imóvel") %>%
+  add_boxplot(y = preco, name = "preço de venda")
+```
+
+### Análise Exploratória dos Dados
+
+```{r}
+
 ```
