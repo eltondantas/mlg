@@ -16,12 +16,20 @@ output:
 <style> body {text-align: justify} </style>
 ```
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 library(rmarkdown); pandoc_version()
 ```
 
-### Dados
+## Pacotes
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(GGally)
+```
+
+## Dados
 
 Exemplo disponível em: Paula, G. A. (2013). [Modelos de Regressão com Apoio Computacional](https://www.ime.usp.br/~giapaula/texto_2013.pdf). São Paulo, SP: IME-USP. (Exercício 23, página 112). Dados disponíveis em: <https://www.ime.usp.br/~giapaula/textoregressao.htm>
 
@@ -37,24 +45,22 @@ Neste trabalho, vamos modelar o preço de venda de imóveis a partir de dados re
 
 -   ***preco***: preço de venda do imóvel (em US\$ 1.000).
 
-O modelo ajustado será o normal linear com variável resposta ***preço de venda*** e as demais variáveis como explicativas. Em seguida, utilizaremos o método AIC para selecionar as variáveis explicativas, faremos uma análise de diagnóstico com o modelo selecionado e interpretaremos os coeficientes estimados.
-
-### Pacotes
-
-```{r}
-library(tidyverse)
-library(plotly)
-```
-
-### Os dados
+Sendo assim, o objetivo dessa modelo é explicar a variável ***preço de venda*** a partir das variáveis ***área do terreno***, ***área construída*** e ***idade***.
 
 ```{r}
 dados = read.table("imoveis.dat")
-
 colnames(dados) = c("imposto", "areaT", "areaC", "idade", "preco")
-
 attach(dados)
+dados
+```
 
+## Análise Descritiva
+
+### Box-plots
+
+O gráfico interativo abaixo nos mostra as medidas resumo para cada uma das variáveis.
+
+```{r}
 plot_ly(type = "box") %>%
   add_boxplot(y = imposto, name = "imposto") %>% 
   add_boxplot(y = areaT, name = "área do terreno") %>% 
@@ -63,8 +69,9 @@ plot_ly(type = "box") %>%
   add_boxplot(y = preco, name = "preço de venda")
 ```
 
-### Análise Exploratória dos Dados
+### Densidade, dispersão e correlação
 
 ```{r}
-
+ggpairs(dados,aes(color=I("slategray4"),fill=I("slategray3")),alpha=0.5,lower = list(continuous = "smooth"))
+ggcorr(dados,low = "red", high= "blue")
 ```
