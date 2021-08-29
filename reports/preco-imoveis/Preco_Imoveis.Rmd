@@ -21,7 +21,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(rmarkdown); pandoc_version()
 ```
 
-### Introdução
+### Dados
+
+Exemplo disponível em: Paula, G. A. (2013). [Modelos de Regressão com Apoio Computacional](https://www.ime.usp.br/~giapaula/texto_2013.pdf). São Paulo, SP: IME-USP. (Exercício 23, página 112). Dados disponíveis em: <https://www.ime.usp.br/~giapaula/textoregressao.htm>
 
 Neste trabalho, vamos modelar o preço de venda de imóveis a partir de dados relativos a uma amostra de 27 imóveis. As variáveis desse conjunto de dados são:
 
@@ -49,11 +51,7 @@ library(plotly)
 ```{r}
 dados = read.table("imoveis.dat")
 
-dados = dados %>% rename(imposto = V1,
-                         areaT = V2,
-                         areaC = V3,
-                         idade = V4,
-                         preco = V5)
+colnames(dados) = c("imposto", "areaT", "areaC", "idade", "preco")
 
 attach(dados)
 
