@@ -27,6 +27,8 @@ library(rmarkdown); pandoc_version()
 library(tidyverse)
 library(plotly)
 library(GGally)
+library(gridExtra)
+library(ggfortify)
 ```
 
 ## Dados
@@ -72,6 +74,37 @@ plot_ly(type = "box") %>%
 ### Densidade, dispersão e correlação
 
 ```{r}
-ggpairs(dados,aes(color=I("slategray4"),fill=I("slategray3")),alpha=0.5,lower = list(continuous = "smooth"))
-ggcorr(dados,low = "red", high= "blue")
+ggpairs(dados, aes(color = I("slategray4"), fill = I("slategray3")),
+        alpha = 0.5, lower = list(continuous = "smooth"))
+```
+
+## Ajuste 1
+
+### Modelo
+
+```{r}
+model1 = lm(preco~1,dados)
+summary(model1)
+```
+
+### Análise de resíduos
+
+```{r}
+# autoplot(broomify(lm(preco~.,dados)))
+# autoplot(lm(preco~.,dados))
+# plot(fortify(lm(preco~.,dados)))
+# 
+par(mfrow=c(2,2),mar=c(5,5,5,5),mai=c(2,2,2,2))
+plot(lm(preco~.,dados), which = 1:4, pch=16)
+# diagP
+
+par(mai=c(100,100,100,100))
+m = lm(preco ~ ., dados)
+
+autoplot(m, which = 1, ncol = 1,
+         label.size = 3, label.colour = "red",label.hjust = -1,
+         lwd = 2)
+
+autoplot(m, which = 2, 
+         label.size = 3, label.colour = "red",label.hjust = -0.5)
 ```
