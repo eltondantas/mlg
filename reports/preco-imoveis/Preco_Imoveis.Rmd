@@ -29,6 +29,7 @@ library(plotly)
 library(GGally)
 library(gridExtra)
 library(ggfortify)
+library(hnp)
 ```
 
 ## Dados
@@ -74,37 +75,50 @@ plot_ly(type = "box") %>%
 ### Densidade, dispersão e correlação
 
 ```{r}
-ggpairs(dados, aes(color = I("slategray4"), fill = I("slategray3")),
-        alpha = 0.5, lower = list(continuous = "smooth"))
+ggpairs(dados, aes(color = I("slategray"), fill = I("slategray")),
+        lower = list(continuous = wrap("smooth",col="black")),
+        diag=list(continuous = wrap("densityDiag",alpha=0.5,size=1)))
 ```
 
 ## Ajuste 1
 
 ### Modelo
 
+Ajustamos inicialmente um modelo com todas as variáveis disponíveis.
+
 ```{r}
-model1 = lm(preco~1,dados)
+model1 = lm(preco~.,dados)
 summary(model1)
 ```
 
 ### Análise de resíduos
 
 ```{r}
-# autoplot(broomify(lm(preco~.,dados)))
-# autoplot(lm(preco~.,dados))
-# plot(fortify(lm(preco~.,dados)))
-# 
-par(mfrow=c(2,2),mar=c(5,5,5,5),mai=c(2,2,2,2))
-plot(lm(preco~.,dados), which = 1:4, pch=16)
-# diagP
-
-par(mai=c(100,100,100,100))
-m = lm(preco ~ ., dados)
-
-autoplot(m, which = 1, ncol = 1,
-         label.size = 3, label.colour = "red",label.hjust = -1,
-         lwd = 2)
-
-autoplot(m, which = 2, 
-         label.size = 3, label.colour = "red",label.hjust = -0.5)
+par(mfrow = c(2,2))
+plot(lm(model1, dados), which = 1:4, pch = 16,lwd = 3)
 ```
+
+### Normalidade
+
+```{r}
+par(mfrow=c(1,2))
+
+hist(model1$residuals, probability = TRUE, main = 'Resíduos do Ajuste',
+      xlab = 'Resíduos', ylab = 'Frequência', col = "gray",)
+lines(density(model1$residuals), col = "slategray", lwd = 4)
+
+hnp(model1, main = 'Gráfico Normal com Envelope',
+    xlab = 'Quantis Teóricos',
+    ylab = 'Resíduos',
+    pch = 16)
+
+shapiro.test(model1$residuals) 
+
+
+inf <- influence.measures(model1) 
+summary(inf)
+
+model1$coefficients
+```
+
+## Ajuste 2
