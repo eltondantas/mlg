@@ -1,5 +1,5 @@
 ---
-title: "Modelando Preços de Venda de Imóveis com Modelo Linear Normal"
+title: "Aplicações de Modelos Lineares Generalizados"
 author: "Elton Dantas de Oliveira Mesquita"
 output:
   html_document:
@@ -25,19 +25,33 @@ library(rmarkdown); pandoc_version()
 
 ```{r}
 library(tidyverse)
+library(psych)
 library(plotly)
 library(GGally)
-library(gridExtra)
-library(ggfortify)
 library(hnp)
+library(car)
 library(nortest)
 ```
 
-## Dados
+# Modelo Linear Normal
+
+Para as aplicações a seguir, consideraremos o modelo de regressão normal linear
+
+$$
+y_i = \beta_1 + \beta_2x_{2i} + ... + \beta_px_{pi} + \epsilon_i, \quad i = 1,...,n
+$$
+
+em que os erros $e_i$ são variáveis aleatórias independentes, normalmente distribuídas, de média zero e variância $\sigma^2$ constante.
+
+<br>
+
+## Previsão de Vendas de Imóveis
+
+### Dados
 
 Exemplo disponível em: Paula, G. A. (2013). [Modelos de Regressão com Apoio Computacional](https://www.ime.usp.br/~giapaula/texto_2013.pdf). São Paulo, SP: IME-USP. (Exercício 23, página 112). Dados disponíveis em: <https://www.ime.usp.br/~giapaula/textoregressao.htm>
 
-Neste trabalho, vamos modelar o preço de venda de imóveis a partir de dados relativos a uma amostra de 27 imóveis. As variáveis desse conjunto de dados são:
+Neste exemplo, vamos modelar o preço de venda de imóveis a partir de dados relativos a uma amostra de 27 imóveis. As variáveis do conjunto de dados são:
 
 -   ***imposto***: imposto do imóvel (em US\$ 100);
 
@@ -49,26 +63,33 @@ Neste trabalho, vamos modelar o preço de venda de imóveis a partir de dados re
 
 -   ***preco***: preço de venda do imóvel (em US\$ 1.000).
 
-Sendo assim, o objetivo dessa modelo é explicar a variável ***preço de venda*** a partir das variáveis ***área do terreno***, ***área construída*** e ***idade***.
+Sendo assim, o nosso objetivo é encontrar o melhor ajuste linear, nesse caso, que explique e quantifique a variável ***preço de venda***, a partir das demais variáveis.
+
+$$
+preço_i = \beta_0 + \beta_1imposto_i + \beta_2areaC_i + \beta_3areaT_i + \beta_4idade_i
+$$
 
 ```{r}
+# Obtendo os dados
 dados = read.table("imoveis.dat")
 colnames(dados) = c("imposto", "areaT", "areaC", "idade", "preco")
 attach(dados)
-dados
 
+# Algumas observações dos dados
+head(dados)
+
+# Medidas descritivas
+describe(dados)
 ```
 
 <br>
 
-## Análise Descritiva
+### Análise Descritiva
 
-### Box-plots
-
-O gráfico interativo a baixo nos mostra algumas medidas resumo para cada uma das variáveis.
+#### Box-plots
 
 ```{r}
-plot_ly(type = "box") %>%
+plot_ly(,type = "box") %>%
   add_trace(y = imposto, name = "imposto") %>% 
   add_trace(y = areaT, name = "área do terreno") %>% 
   add_trace(y = areaC, name = "área construída") %>%
@@ -76,7 +97,13 @@ plot_ly(type = "box") %>%
   add_trace(y = preco, name = "preço de venda")
 ```
 
-### Densidades, Dispersões e Correlações
+Em um resumo descritivo dos dados, observamos altas variâncias das variáveis idade e preço, que se destacam das demais. Com uma idade mediana de 40 anos, temos um imóvel de apenas 3 anos de idade. E com um preço mediano de $US\$\$36,900, temos dois imóveis bem mais caros, custando $US\$ 82,900 e $US\$ 84,900.
+
+Os gráficos de box-plot nos mostram que os dados possuem outliers e que as variáveis possuem distribuições assimétricas. Focando na nossa variável alvo, preço, os pontos destoantes são os dois imóveis mais caros.
+
+<br>
+
+#### Densidades, Dispersões e Correlações
 
 ```{r}
 g = ggpairs(dados, aes(color = I("slategray"), fill = I("slategray")),
@@ -85,19 +112,21 @@ g = ggpairs(dados, aes(color = I("slategray"), fill = I("slategray")),
 ggplotly(g)
 ```
 
-Nos gráficos descritivos acima, percebemos que todas as variáveis possuem distribuições assimétricas e que a variável preço possui altas correlações positivas com as demais, exceto com a variável idade, em que a correlação é fraca e negativa. Em outras palavras, quanto maiores os valores de imposto, área do terreno e área construída, maior o valor do preço de venda. Também identificamos a presença de outliers, mais evidentes nos gráficos de box-plot.
+No gráfico acima, as curvas representadas na diagonal principal deixam mais evidente a constatação de assimetria obtida com os box-plots. A variável preço possui correlações positivas fortes com as variáveis imposto, área do terreno e área construída, mas uma correlação negativa fraca com a variável idade. Em outras palavras, quanto maiores os valores de imposto, área construída, área do terreno, maior o preço de venda do imóvel.
+
+Podemos observar também que há correlações relevantes entre as variáveis explicativas imposto, área construída e área do terreno. Isto nos indica uma possível redundância de informação. Então, talvez um modelo completo com todas as variáveis não seja o melhor.
 
 <br>
 
-## Ajuste 1
+### Ajuste 1
 
-Nesse primeiro ajuste, consideraremos para o nosso modelo todas as variáveis disponíveis e o chamaremos de modelo completo. Partiremos do modelo normal linear.
+Nesse primeiro ajuste, consideraremos para o nosso modelo todas as variáveis disponíveis e o chamaremos de modelo completo.
 
 $$
 preço = \beta_0 + \beta_1*imposto + \beta_2*areaC + \beta_3*areaT + \beta_4*idade + \epsilon
 $$
 
-### Modelo Completo
+#### Modelo Completo
 
 ```{r}
 model1 = lm(preco~.,dados)
@@ -112,19 +141,30 @@ A seguir, faremos a análise de diagnóstico para verificar a adequação do mod
 
 ## Diagnóstico 1
 
-### Normalidade e Envelope
-
-Traçaremos agora os gráficos de histograma e envelope, para avaliar o ajuste do modelo normal.
+### Envelope
 
 ```{r}
-hist(model1$residuals, probability = TRUE, main = 'Resíduos do Ajuste',
-      xlab = 'Resíduos', ylab = 'Frequência', col = "gray",)
-lines(density(model1$residuals), col = "slategray", lwd = 4)
+qqPlot(model1,pch = 16,main="Envelope")
 
-hnp(model1, main = 'Gráfico Normal com Envelope',
-    xlab = 'Quantis Teóricos',
-    ylab = 'Resíduos',
-    pch = 16,halfnormal =  FALSE, resid.type = "standard")
+# Para comparar com uma distribuição específica
+# qqPlot(model1$residuals, distribution = "gamma", shape=10)
+```
+
+### Análise de Resíduos
+
+```{r}
+residualPlot(model1,pch=16,main="Resíduos x Valores ajustados")
+```
+
+```{r}
+influencePlot(model1)
+
+plot(hatvalues(model1))
+
+
+leveragePlots(model1)
+
+dfbetasPlots(model1,)
 ```
 
 <br>
@@ -136,18 +176,8 @@ Para os testes a seguir, consideramos
 $H_0$: Os resíduos têm distribuição normal.
 
 ```{r}
-# Kolmogorov - Smirnov
-ks.test(model1$residuals,"pnorm")
-# Lilliefors
-lillie.test(model1$residuals)
-# Cramer-von-Mises
-cvm.test(model1$residuals)
 # Shapiro-Wilk
 shapiro.test(model1$residuals)
-# Shepiro-Francia
-sf.test(model1$residuals)
-# Anderson-Darling
-ad.test(model1$residuals)
 ```
 
 Ao nível de 5% de significância, não rejeitamos a hipótese de que os resíduos tenham distribuição normal.
