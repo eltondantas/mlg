@@ -65,10 +65,6 @@ Neste exemplo, vamos modelar o preço de venda de imóveis a partir de dados rel
 
 Sendo assim, o nosso objetivo é encontrar o melhor ajuste linear, nesse caso, que explique e quantifique a variável ***preço de venda***, a partir das demais variáveis.
 
-$$
-preço_i = \beta_0 + \beta_1imposto_i + \beta_2areaC_i + \beta_3areaT_i + \beta_4idade_i
-$$
-
 ```{r}
 # Obtendo os dados
 dados = read.table("dados/imoveis.dat")
@@ -120,10 +116,10 @@ Podemos observar também que há correlações relevantes entre as variáveis ex
 
 ### Ajuste 1
 
-Nesse primeiro ajuste, consideraremos para o nosso modelo todas as variáveis disponíveis e o chamaremos de modelo completo.
+Nesse primeiro ajuste, consideraremos o modelo completo com todas as variáveis disponíveis.
 
 $$
-preço = \beta_0 + \beta_1*imposto + \beta_2*areaC + \beta_3*areaT + \beta_4*idade
+preço_i = \beta_0 + \beta_1imposto_i + \beta_2areaC_i + \beta_3areaT_i + \beta_4idade_i
 $$
 
 #### Modelo Completo
@@ -135,39 +131,7 @@ summary(modelc)
 
 Verificamos que, para o modelo completo, as variáveis imposto e área construída são as únicas significativas e obtivemos um $R^2$ de 0.92, muito alto, indicando um possível bom ajuste aos dados amostrais. Porém, o $R^2$ por si só não nos garante que o modelo seja o mais adequado.
 
-A seguir, faremos a análise de diagnóstico para verificar a adequação do modelo.
-
 <br>
-
-#### Diagnóstico
-
-```{r}
-qqPlot(modelc, pch = 16, main = "Envelope")
-
-# Para comparar com uma distribuição específica
-# qqPlot(model1$residuals, distribution = "gamma", shape=10)
-```
-
-Teste de Normalidade
-
-$H_0$: Os resíduos têm distribuição normal.
-
-```{r}
-# Shapiro-Wilk
-shapiro.test(modelc$residuals)
-```
-
-Ao nível de 5% de significância, não rejeitamos a hipótese de que os resíduos tenham distribuição normal. No gráfico de envelope para o ajuste normal, os pontos estão dentro das bandas, porém a presença de ondulações é indício de variância não constante. Vamos verificar se de fato isso ocorre no gráfico de resíduos por valores ajustados.
-
-```{r}
-residualPlot(modelc,pch=16,main="Resíduos x Valores ajustados")
-```
-
-Embora não haja violação do pressuposto de normalidade dos resíduos, o gráfico de Resíduos x Valores ajustados deixa evidente a heterocedasticidade, isto é, a variância não constante. Portanto, o ajuste com todas as variáveis não é o mais adequado.
-
-<br>
-
-### Ajuste 2
 
 #### Seleção de variáveis
 
@@ -188,59 +152,31 @@ modelp = lm(preco~imposto+areaC,dados)
 summary(modelp)
 ```
 
-Novamente, as variáveis imposto e área construída são bastante significativas.
-
-<br>
-
 #### Diagnóstico
+
+Agora, faremos a análise de diagnóstico para verificar a adequação do modelo.
 
 ```{r}
 qqPlot(modelp, pch = 16, main = "Envelope")
 ```
 
+Teste de Normalidade
+
+$H_0$: Os resíduos têm distribuição normal.
+
 ```{r}
+# Shapiro-Wilk
 shapiro.test(modelp$residuals)
 ```
 
-A 5% de significância não rejeitamos a hipótese de que os resíduos tenham distribuição normal. O gráfico de envelope também não aponta indícios que a normalidade esteja sendo violada, porém as ondulações indicam variância não constante.
+Ao nível de 5% de significância, não rejeitamos a hipótese de que os resíduos tenham distribuição normal. No gráfico de envelope para o ajuste normal, os pontos estão dentro das bandas, porém a presença de ondulações é indício de variância não constante. Vamos verificar se de fato isso ocorre no gráfico de resíduos por valores ajustados.
 
 ```{r}
-residualPlot(modelp, pch = 16, main = "Resíduos x Valores ajustados")
+residualPlot(modelp, pch = 16, type = "rstudent",
+             main = "Resíduos studentizados x Valores ajustados")
 ```
 
-Novamente, temos um modelo que atende o pressuposto de normalidade dos resíduos, mas viola o de homocedasticidade.
-
-<br>
-
-### Ajuste 3
-
-Tentaremos corrigir a falta de ajuste do modelo parcimonioso, aplicando a função logaritmíca na variável preço.
-
-#### Modelo parcimonioso com logartimo
-
-```{r}
-mlog = lm(log(preco)~imposto+areaC,dados)
-summary(mlog)
-```
-
-Obtemos, então, um modelo em que as variáveis imposto e área construída continuam bastante significativas e, ainda, o intercepto também.
-
-#### Diagnóstico
-
-```{r}
-qqPlot(mlog, pch = 16, main = "Envelope")
-```
-
-```{r}
-shapiro.test(mlog$residuals)
-```
-
-```{r}
-residualPlot(mlog, type = "rstudent",
-             pch = 16,main = "Resíduos studentizados x Valores ajustados")
-```
-
-Pelo gráfico de envelope, não há indícios de que o pressuposto de normalidade tenha sido violado. No gráfico de Resíduos x Valor ajustado, temos um cenário melhor que os anteriores, com uma variância mais próxima da homogeneidade. Sem considerar os dois pontos mais afastados, observamos uma nuvem de pontos mais dispersos na faixa de -2 a 2 que nos gráficos anteriores.
+Embora não haja violação do pressuposto de normalidade dos resíduos, o gráfico de resíduos por valores ajustados nos dá indícios de heterocedasticidade, isto é, variância não constante, como supomos no gráfico de envelope. Porém, esse comportamento pode estar sendo influenciado pelos dois pontos mais distantes que vemos acima.
 
 <br>
 
@@ -259,46 +195,128 @@ Medidas de influência:
 -   HAT (***hat***): diagonal da matriz de projeção ($H = X(X'X)^{-1}X'$) da solução dos mínimos quadrados, é a métrica de alavancagem.
 
 ```{r}
-inf = influence.measures(mlog)
+inf = influence.measures(modelp)
 summary(inf)
 ```
 
-Baseando-se nas medidas de influência acima, que verificam o efeito da remoção de cada uma das observações , temos que os possíveis pontos de influência são as observações 9, 10 e 27. Percebemos também que a observação 27 é a mais crítica, por impactar nas estimativas dos parâmetros, nos valores ajustados e na variância do modelo. Também podemos constatar isso graficamente.
+Baseando-se nas medidas de influência acima, que verificam o efeito da remoção de cada uma das observações individualmente, temos que os possíveis pontos de influência são as observações 9, 10 e 27. Percebemos também que a observação 27 é a mais crítica, por impactar nas estimativas dos parâmetros, nos valores ajustados e na variância do modelo. Também podemos constatar isso graficamente.
 
 ```{r}
-plot(lm(mlog, dados), which = 4, pch = 16,lwd = 3,
-     caption = c("","","","Distância de Cook x Observação"))
-abline(h=1,col="red",lty=2)
-
-# 2ª opção
-# plot(inf$infmat[,"cook.d"], pch = 16,
-#      xlab = "observação", ylab = "distância de cook", main = "Distância de Cook")
-# abline(h=1,col="red",lty=2)
-# text(inf$infmat[,"cook.d"],pos = 3,offset=0.2)
+# DISTANCIA DE COOK
+plot(modelp, which=4, lwd=5, main="Distância de Cook x Observação", caption=F)
 ```
 
 ```{r}
-cut = 2*3/27
-plot(inf$infmat[,"hat"], pch = 16,
+cut = 2*3/27 # 2*p/n
+plot(hatvalues(modelp), pch = 16,
      xlab = "observação", ylab = "medida h", main = "Alavancagem")
-abline(h = cut, col = "red",lty = 2)
-text(inf$infmat[,"hat"], pos = 3, offset = 0.2)
+abline(h = cut, col = "red", lty = 2)
+text(hatvalues(modelp) * as.integer(hatvalues(modelp) > cut),
+     cex=0.8, p=1, offset=0.3)
+
+
+plot(modelp,which=1:6)
+
+
 ```
 
 As observações 9, 10 e 27 são referentes aos dados:
 
 ```{r}
-dados[c(9,10,27),c("imposto","areaC")]
+dados[c(9,10,27),c("imposto","areaC","preco")]
+```
+
+#### Impacto das remoções das observações
+
+Observação 9
+
+```{r}
+mlog.sem9 = lm(log(preco)~imposto+areaC,dados, subset = -9)
+(mlog$coefficients - mlog.sem9$coefficients)/mlog$coefficients * 100
+
+summary(mlog)
+summary(mlog.sem9)
 ```
 
 ```{r}
-mlog.sem9
+mlog.sem10 = lm(log(preco)~imposto+areaC,dados,subset=-10)
+(mlog$coefficients - mlog.sem10$coefficients)/mlog$coefficients * 100
+
+summary(mlog)
+summary(mlog.sem10)
 ```
 
 ```{r}
-mlog.sem10
+mlog.sem27 = lm(log(preco)~imposto+areaC,dados,subset=-27)
+(mlog$coefficients - mlog.sem27$coefficients)/mlog$coefficients * 100
+
+summary(mlog)
+summary(mlog.sem27)
 ```
 
 ```{r}
-mlog.sem27
+model = lm(preco~imposto+areaT)
+summary(model)
+qqPlot(model)
+residualPlot(model)
+```
+
+```{r}
+plot(cooks.distance(modelp), pch = 16, lwd = 3,
+     main = "Distância de Cook x Observação")
+
+cut = 2*3/27
+plot(hatvalues(modelp), pch = 16,
+     xlab = "observação", ylab = "medida h", main = "Alavancagem")
+abline(h = cut, col = "red", lty = 2)
+```
+
+```{r}
+modelp.sem27 = lm(log(preco)~imposto+areaC,dados, subset = -27)
+(modelp$coefficients - modelp.sem27$coefficients)/modelp$coefficients * 100
+
+summary(modelp)
+summary(modelp.sem27)
+```
+
+```{r}
+gamma = glm(preco~areaC+imposto,dados, family = Gamma(link="identity"))
+resumo = summary(gamma)
+resumo
+```
+
+```{r}
+shape = gamma.shape(gamma)
+
+desvio_escal = resumo$deviance * shape$alpha
+
+nivel_descrit = 1 - pchisq(desvio_escal,24)
+
+nivel_descrit
+
+fit.model = gamma
+source("envel_gama")
+source("diag_gama")
+
+```
+
+```{r}
+
+```
+
+```{r}
+gamma.sem27 = glm(preco~areaC+imposto,dados, subset=-27,
+                  family = Gamma(link="identity"))
+(gamma$coefficients - gamma.sem27$coefficients)/gamma$coefficients * 100
+
+summary(gamma)
+summary(gamma.sem27)
+```
+
+```{r}
+mlog.sem9 = lm(log(preco)~imposto+areaC,dados, subset = -9)
+(mlog$coefficients - mlog.sem9$coefficients)/mlog$coefficients * 100
+
+summary(mlog)
+summary(mlog.sem9)
 ```
