@@ -17,8 +17,6 @@ output:
 ```
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-
-library(rmarkdown); pandoc_version()
 ```
 
 ## Pacotes
@@ -63,7 +61,7 @@ Neste exemplo, vamos modelar o preço de venda de imóveis a partir de dados rel
 
 -   ***preco***: preço de venda do imóvel (em US\$ 1.000).
 
-Sendo assim, o nosso objetivo é encontrar o melhor ajuste linear, nesse caso, que explique e quantifique a variável ***preço de venda***, a partir das demais variáveis.
+Sendo assim, o nosso objetivo é encontrar o melhor ajuste linear que explique e quantifique a variável ***preço de venda***, a partir das demais.
 
 ```{r}
 # Obtendo os dados
@@ -85,7 +83,7 @@ describe(dados)
 #### Box-plots
 
 ```{r}
-plot_ly(,type = "box") %>%
+plot_ly(type = "box") %>%
   add_trace(y = imposto, name = "imposto") %>% 
   add_trace(y = areaT, name = "área do terreno") %>% 
   add_trace(y = areaC, name = "área construída") %>%
@@ -93,7 +91,7 @@ plot_ly(,type = "box") %>%
   add_trace(y = preco, name = "preço de venda")
 ```
 
-Em um resumo descritivo dos dados, observamos altas variâncias das variáveis idade e preço, destacando-se das demais. Com uma idade mediana de 40 anos, temos um imóvel de apenas 3 anos de idade. E com um preço mediano de \$US\$\$36,900, temos dois imóveis bem mais caros, custando \$US\$ 82,900 e \$US\$ 84,900.
+Em um resumo descritivo dos dados, observamos altas variâncias das variáveis idade e preço, destacando-se das demais. Com uma idade mediana de 40 anos, temos um imóvel de apenas 3 anos de idade. E com um preço mediano de US\$ 36.900, temos dois imóveis bem mais caros, custando US\$ 82.900 e US\$ 84.900.
 
 Os gráficos de box-plot nos mostram que os dados possuem outliers e que as variáveis possuem distribuições assimétricas. Focando na nossa variável alvo, preço, os pontos destoantes são justamente os dois imóveis mais caros.
 
@@ -108,13 +106,13 @@ g = ggpairs(dados, aes(color = I("slategray"), fill = I("slategray")),
 ggplotly(g)
 ```
 
-No gráfico acima, as curvas representadas na diagonal principal deixam mais evidente a constatação de assimetria observada nos box-plots. A variável preço possui correlações positivas fortes com as variáveis imposto, área do terreno e área construída, mas uma correlação negativa fraca com a variável idade. Em outras palavras, quanto maiores os valores de imposto, área construída, área do terreno, maior o preço de venda do imóvel.
+No gráfico acima, as curvas representadas na diagonal principal deixam mais evidente a constatação de assimetria nas distribuições observada nos box-plots. A variável preço possui correlações positivas fortes com as variáveis imposto, área do terreno e área construída, mas uma correlação negativa fraca com a variável idade. Em outras palavras, quanto maiores os valores de imposto, área construída e área do terreno, maior o preço de venda do imóvel.
 
 Podemos observar também que há correlações relevantes entre as variáveis explicativas imposto, área construída e área do terreno. Isto nos dá indícios de multicolinearidade e, assim, uma possível redundância de informação. Então, talvez um modelo completo com todas as variáveis não seja o melhor.
 
 <br>
 
-### Ajuste 1
+### Modelo Completo
 
 Nesse primeiro ajuste, consideraremos o modelo completo com todas as variáveis disponíveis.
 
@@ -122,58 +120,80 @@ $$
 preço_i = \beta_0 + \beta_1imposto_i + \beta_2areaC_i + \beta_3areaT_i + \beta_4idade_i
 $$
 
-#### Modelo Completo
-
 ```{r}
-modelc = lm(preco~.,dados)
-summary(modelc)
+model1 = lm(preco~.,dados)
+summary(model1)
 ```
 
 Verificamos que, para o modelo completo, as variáveis imposto e área construída são as únicas significativas e obtivemos um $R^2$ de 0.92, muito alto, indicando um possível bom ajuste aos dados amostrais. Porém, o $R^2$ por si só não nos garante que o modelo seja o mais adequado.
 
 <br>
 
-#### Seleção de variáveis
+### Seleção de variáveis
 
 Aplicaremos o critério de informação de Akaike (AIC) ao modelo completo, para selecionar as variáveis que deverão permanecer.
 
 ```{r}
-MASS::stepAIC(modelc)
+MASS::stepAIC(model1)
 ```
 
 O AIC nos retornou as variáveis imposto e área construída como aquelas que deverão ser mantidas no modelo, o qual chamaremos de modelo parcimonioso.
 
 <br>
 
-#### Modelo Parcimonioso
+### Modelo Parcimonioso
 
 ```{r}
-modelp = lm(preco~imposto+areaC,dados)
-summary(modelp)
+model2 = lm(preco~imposto+areaC,dados)
+summary(model2)
 ```
 
-#### Diagnóstico
+E, assim, obtemos um modelo em que as variáveis imposto e área construída são altamente significativas.
 
-Agora, faremos a análise de diagnóstico para verificar a adequação do modelo.
+Porém, na análise descritiva, observamos que as variáveis área construída e área do terreno possuem uma correlação considerável. Então, podemos ainda testar um segundo modelo parcimonioso com as variáveis imposto e área do terreno.
 
 ```{r}
-qqPlot(modelp, pch = 16, main = "Envelope")
+model3 = lm(preco~imposto+areaT,dados)
+summary(model3)
 ```
 
-Teste de Normalidade
+E, assim, obtemos um modelo em que a variável área do terreno passa de não significativa para pouco significativa, enquanto que a variável imposto continua bastante significativa.
+
+<br>
+
+### Diagnóstico
+
+Agora, faremos a análise de diagnóstico dos dois modelos parcimoniosos propostos, para verificar suas adequações.
+
+#### Envelope
+
+```{r}
+par(mfrow=c(1,2))
+qqPlot(model2, pch = 16, main = "preco ~ imposto + areaC")
+qqPlot(model3, pch = 16, main = "preco ~ imposto + areaT")
+```
+
+#### Teste de Normalidade
 
 $H_0$: Os resíduos têm distribuição normal.
 
 ```{r}
 # Shapiro-Wilk
-shapiro.test(modelp$residuals)
+shapiro.test(model2$residuals)
+shapiro.test(model3$residuals)
 ```
 
-Ao nível de 5% de significância, não rejeitamos a hipótese de que os resíduos tenham distribuição normal. No gráfico de envelope para o ajuste normal, os pontos estão dentro das bandas, porém a presença de ondulações é indício de variância não constante. Vamos verificar se de fato isso ocorre no gráfico de resíduos por valores ajustados.
+Ao nível de 5% de significância, não rejeitamos a hipótese de que os resíduos tenham distribuição normal. Nos gráficos de envelope para o ajuste normal, os pontos estão dentro das bandas, porém a presença de ondulações é indício de variância não constante. Vamos verificar se de fato isso ocorre no gráfico de resíduos por valores ajustados.
+
+#### Resíduos x Valores ajustados
 
 ```{r}
-residualPlot(modelp, pch = 16, type = "rstudent",
-             main = "Resíduos studentizados x Valores ajustados")
+par(mfrow=c(1,2),mar=c(5,4,5,2))
+residualPlot(model2, pch = 16, type = "rstudent",
+             main = "preco ~ imposto + areaC",linear=F)
+residualPlot(model3, pch = 16, type = "rstudent",
+             main = "preco ~ imposto + areaC")
+title("Resíduos studentizados x Valores ajustados",outer = TRUE)
 ```
 
 Embora não haja violação do pressuposto de normalidade dos resíduos, o gráfico de resíduos por valores ajustados nos dá indícios de heterocedasticidade, isto é, variância não constante, como supomos no gráfico de envelope. Porém, esse comportamento pode estar sendo influenciado pelos dois pontos mais distantes que vemos acima.
