@@ -12,28 +12,25 @@ output:
       smooth_scroll: false
 ---
 
-```{=html}
-<style> body {text-align: justify} </style>
-```
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
-## Pacotes
+# Pacotes
 
 ```{r}
 library(tidyverse)
 library(psych)
 library(plotly)
 library(GGally)
-library(hnp)
 library(car)
-library(nortest)
 ```
 
-# Modelo Linear Normal
+<br>
 
-Para as aplicações a seguir, consideraremos o modelo de regressão normal linear
+# I. Modelo Linear Normal
+
+Para a aplicação a seguir, consideraremos o modelo de regressão normal linear
 
 $$
 y_i = \beta_1 + \beta_2x_{2i} + ... + \beta_px_{pi} + \epsilon_i, \quad i = 1,...,n
@@ -43,7 +40,7 @@ em que os erros $e_i$ são variáveis aleatórias independentes, normalmente dis
 
 <br>
 
-## Previsão de Vendas de Imóveis
+## Previsão do Preço de Venda de Imóveis
 
 ### Dados
 
@@ -61,7 +58,7 @@ Neste exemplo, vamos modelar o preço de venda de imóveis a partir de dados rel
 
 -   ***preco***: preço de venda do imóvel (em US\$ 1.000).
 
-Sendo assim, o nosso objetivo é encontrar o melhor ajuste linear que explique e quantifique a variável ***preço de venda***, a partir das demais.
+Sendo assim, o nosso objetivo é encontrar o melhor ajuste linear que explique e quantifique a variável ***preço de venda*** a partir das demais.
 
 ```{r}
 # Obtendo os dados
@@ -91,9 +88,9 @@ plot_ly(type = "box") %>%
   add_trace(y = preco, name = "preço de venda")
 ```
 
-Em um resumo descritivo dos dados, observamos altas variâncias das variáveis idade e preço, destacando-se das demais. Com uma idade mediana de 40 anos, temos um imóvel de apenas 3 anos de idade. E com um preço mediano de US\$ 36.900, temos dois imóveis bem mais caros, custando US\$ 82.900 e US\$ 84.900.
+Em um breve resumo descritivo dos dados, observamos que as altas variâncias das variáveis idade e preço destacam-se das demais. Com uma idade mediana de 40 anos, temos um imóvel de apenas 3 anos de idade e, com um preço mediano de US\$ 36.900, temos dois imóveis bem mais caros nos valores de US\$ 82.900 e US\$ 84.900.
 
-Os gráficos de box-plot nos mostram que os dados possuem outliers e que as variáveis possuem distribuições assimétricas. Focando na nossa variável alvo, preço, os pontos destoantes são justamente os dois imóveis mais caros.
+Os gráficos de box-plot nos mostram que os dados possuem outliers e que as variáveis possuem distribuições assimétricas. Focando na variável alvo, preço de venda, os pontos destoantes são justamente os dois imóveis mais caros.
 
 <br>
 
@@ -108,7 +105,7 @@ ggplotly(g)
 
 No gráfico acima, as curvas representadas na diagonal principal deixam mais evidente a constatação de assimetria nas distribuições observada nos box-plots. A variável preço possui correlações positivas fortes com as variáveis imposto, área do terreno e área construída, mas uma correlação negativa fraca com a variável idade. Em outras palavras, quanto maiores os valores de imposto, área construída e área do terreno, maior o preço de venda do imóvel.
 
-Podemos observar também que há correlações relevantes entre as variáveis explicativas imposto, área construída e área do terreno. Isto nos dá indícios de multicolinearidade e, assim, uma possível redundância de informação. Então, talvez um modelo completo com todas as variáveis não seja o melhor.
+Podemos observar também que há correlações relevantes entre as variáveis explicativas imposto, área construída e área do terreno. Isso nos dá indícios de multicolinearidade e, assim, uma possível redundância de informação passada por essas variáveis. Então, talvez um modelo completo com todas as variáveis não seja o mais adequado.
 
 <br>
 
@@ -125,7 +122,7 @@ model1 = lm(preco~.,dados)
 summary(model1)
 ```
 
-Verificamos que, para o modelo completo, as variáveis imposto e área construída são as únicas significativas e obtivemos um $R^2$ de 0.92, muito alto, indicando um possível bom ajuste aos dados amostrais. Porém, o $R^2$ por si só não nos garante que o modelo seja o mais adequado.
+Verificamos que, para o modelo completo, as variáveis imposto e área construída são as únicas significativas e obtivemos um $R^2$ ajustado de 0.92, muito alto, indicando um possível bom ajuste aos dados amostrais. Porém, o $R^2$ por si só não nos garante que o modelo seja o mais adequado.
 
 <br>
 
@@ -150,14 +147,14 @@ summary(model2)
 
 E, assim, obtemos um modelo em que as variáveis imposto e área construída são altamente significativas.
 
-Porém, na análise descritiva, observamos que as variáveis área construída e área do terreno possuem uma correlação considerável. Então, podemos ainda testar um segundo modelo parcimonioso com as variáveis imposto e área do terreno.
+Porém, na análise descritiva, observamos que as variáveis área construída e área do terreno possuem uma correlação considerável. Então, podemos ainda testar um segundo modelo parcimonioso considerando a variável área do terreno ao invés da área construída.
 
 ```{r}
 model3 = lm(preco~imposto+areaT,dados)
 summary(model3)
 ```
 
-E, assim, obtemos um modelo em que a variável área do terreno passa de não significativa para pouco significativa, enquanto que a variável imposto continua bastante significativa.
+E, assim, obtemos um modelo em que a variável área do terreno passa de não significativa para pouco significativa ao nível de 10% de significância. Já a variável imposto continua bastante significativa ao nível de 1% de significância.
 
 <br>
 
@@ -173,6 +170,8 @@ qqPlot(model2, pch = 16, main = "preco ~ imposto + areaC")
 qqPlot(model3, pch = 16, main = "preco ~ imposto + areaT")
 ```
 
+<br>
+
 #### Teste de Normalidade
 
 $H_0$: Os resíduos têm distribuição normal.
@@ -183,20 +182,22 @@ shapiro.test(model2$residuals)
 shapiro.test(model3$residuals)
 ```
 
-Ao nível de 5% de significância, não rejeitamos a hipótese de que os resíduos tenham distribuição normal. Nos gráficos de envelope para o ajuste normal, os pontos estão dentro das bandas, porém a presença de ondulações é indício de variância não constante. Vamos verificar se de fato isso ocorre no gráfico de resíduos por valores ajustados.
+Ao nível de 5% de significância, não rejeitamos a hipótese de que os resíduos tenham distribuição normal. Nos gráficos de envelope para o ajuste normal, os pontos estão dentro das bandas, exceto pela observação 27 no modelo com área do terreno. Porém, a presença de leves ondulações pode ser indício de variância não constante. Vamos verificar se de fato isso ocorre no gráfico de resíduos por valores ajustados.
+
+<br>
 
 #### Resíduos x Valores ajustados
 
 ```{r}
-par(mfrow=c(1,2),mar=c(5,4,5,2))
-residualPlot(model2, pch = 16, type = "rstudent",
-             main = "preco ~ imposto + areaC",linear=F)
-residualPlot(model3, pch = 16, type = "rstudent",
-             main = "preco ~ imposto + areaC")
-title("Resíduos studentizados x Valores ajustados",outer = TRUE)
+residualPlot(model2, type = "rstudent", id = TRUE,
+             ylab = "resíduo studentizado", xlab = "valor ajustado",
+             main = "preco ~ imposto + areaC", pch = 16, quadratic = FALSE)
+residualPlot(model3, type = "rstudent", id = TRUE,
+             ylab = "resíduo studentizado", xlab = "valor ajustado",
+             main = "preco ~ imposto + areaT", pch = 16, quadratic = FALSE)
 ```
 
-Embora não haja violação do pressuposto de normalidade dos resíduos, o gráfico de resíduos por valores ajustados nos dá indícios de heterocedasticidade, isto é, variância não constante, como supomos no gráfico de envelope. Porém, esse comportamento pode estar sendo influenciado pelos dois pontos mais distantes que vemos acima.
+Embora não haja violação do pressuposto de normalidade dos resíduos, o gráfico de resíduos por valores ajustados nos dá indícios de heterocedasticidade, isto é, variância não constante, como havíamos suposto a partir do gráfico de envelope. Porém, esse comportamento pode estar sendo influenciado pelas observações destoantes vistas na etapa descritiva. Além disso, podemos perceber no gráfico de resíduos por valores ajustados a presença de pontos aberrantes, isto é, muito além do intervalo [-2,2]. No caso do primeiro modelo parcimonioso, o ponto aberrante é a observação 10, enquanto que no segundo modelo parcimonioso são as observações 9 e 27. Sendo assim, a seguir, vamos verificar se de fato esses pontos estão influenciando na qualidade dos ajustes.
 
 <br>
 
@@ -215,27 +216,43 @@ Medidas de influência:
 -   HAT (***hat***): diagonal da matriz de projeção ($H = X(X'X)^{-1}X'$) da solução dos mínimos quadrados, é a métrica de alavancagem.
 
 ```{r}
-inf = influence.measures(modelp)
+inf = influence.measures(model2)
+summary(inf)
+
+inf = influence.measures(model3)
 summary(inf)
 ```
 
-Baseando-se nas medidas de influência acima, que verificam o efeito da remoção de cada uma das observações individualmente, temos que os possíveis pontos de influência são as observações 9, 10 e 27. Percebemos também que a observação 27 é a mais crítica, por impactar nas estimativas dos parâmetros, nos valores ajustados e na variância do modelo. Também podemos constatar isso graficamente.
+Baseando-se nas medidas de influência acima, que verificam o efeito da remoção de cada uma das observações individualmente, temos que os possíveis pontos de influência são as observações 9 e 27, para ambos os modelos parcimoniosos, e a observação 10, para o segundo. Percebemos também que a observação 27 é a mais crítica, por impactar nas estimativas dos dois parâmetros, nos valores ajustados e na variância do modelo. Também podemos constatar isso graficamente, como se segue a baixo.
 
 ```{r}
 # DISTANCIA DE COOK
-plot(modelp, which=4, lwd=5, main="Distância de Cook x Observação", caption=F)
+
+plot(model2, which=4, lwd=5, main="Distância de Cook x Observação", caption=F,
+     sub.caption = "preco ~ imposto + areaC")
+plot(model3, which=4, lwd=5, main="Distância de Cook x Observação", caption=F,
+     sub.caption = "preco ~ imposto + areaT")
 ```
 
 ```{r}
+# ALAVANCAGEM
+
 cut = 2*3/27 # 2*p/n
-plot(hatvalues(modelp), pch = 16,
-     xlab = "observação", ylab = "medida h", main = "Alavancagem")
-abline(h = cut, col = "red", lty = 2)
-text(hatvalues(modelp) * as.integer(hatvalues(modelp) > cut),
+plot(hatvalues(model2), pch = 16,
+     xlab = "observação", ylab = "medida h", main = "Alavancagem",
+     sub = "preco ~ imposto + areaC")
+abline(h = cut, lty = 2, lwd = 2)
+text(hatvalues(model2) * as.integer(hatvalues(model2) > cut),
      cex=0.8, p=1, offset=0.3)
 
 
-plot(modelp,which=1:6)
+cut = 2*3/27 # 2*p/n
+plot(hatvalues(model3), pch = 16,
+     xlab = "observação", ylab = "medida h", main = "Alavancagem",
+     sub = "preco ~ imposto + areaT")
+abline(h = cut, lty = 2, lwd = 2)
+text(hatvalues(model3) * as.integer(hatvalues(model3) > cut),
+     cex=0.8, p=1, offset=0.3)
 
 
 ```
@@ -243,100 +260,89 @@ plot(modelp,which=1:6)
 As observações 9, 10 e 27 são referentes aos dados:
 
 ```{r}
-dados[c(9,10,27),c("imposto","areaC","preco")]
+dados[c(9,10,27),c("imposto","areaC","areaT","preco")]
 ```
+
+Os imóveis 9 e 10 possuem os valores de imposto mais elevados e as maiores áreas de terreno e de construção. De acordo com a relação linear identificada na etapa descritiva e a significância dessas variáveis para o modelo preditivo, podemos dizer que essas características justificam um alto preço de venda. Porém, os valores atribuídos aos imóveis 9 e 10 são muito mais elevados que os esperados pelo modelo proposto a imóveis com os mesmos atributos. Já a observação 27 causa estranheza por ter um valor de imposto tão alto e próximo aos dos imóveis 9 e 10, mesmo tendo menos da metade de suas áreas de terreno e de construção e custando pouco menos da metade que o imóvel 10.
+
+<br>
 
 #### Impacto das remoções das observações
 
-Observação 9
-
 ```{r}
-mlog.sem9 = lm(log(preco)~imposto+areaC,dados, subset = -9)
-(mlog$coefficients - mlog.sem9$coefficients)/mlog$coefficients * 100
-
-summary(mlog)
-summary(mlog.sem9)
+# Compara os coeficientes e seus respectivos p-valores de um modelo
+# após a remoção de uma observação
+impacto = function(m1, m2){
+  imp = (coef(m1) - coef(m2))/coef(m1) * 100
+  impacto = data.frame(coef_com_i = coef(m1),
+                       coef_sem_i = coef(m2),
+                       impacto = imp,
+                       pval_com_i = summary(m1)$coefficients[,4],
+                       pval_sem_i = summary(m2)$coefficients[,4])
+  return(impacto)
+}
 ```
 
-```{r}
-mlog.sem10 = lm(log(preco)~imposto+areaC,dados,subset=-10)
-(mlog$coefficients - mlog.sem10$coefficients)/mlog$coefficients * 100
+-   Observação i=9:
 
-summary(mlog)
-summary(mlog.sem10)
-```
+    ```{r}
+    model2_sem9 = lm(preco~imposto+areaC,dados,subset=-9)
+    impacto(model2,model2_sem9)
 
-```{r}
-mlog.sem27 = lm(log(preco)~imposto+areaC,dados,subset=-27)
-(mlog$coefficients - mlog.sem27$coefficients)/mlog$coefficients * 100
+    model3_sem9 = lm(preco~imposto+areaT,dados,subset=-9)
+    impacto(model3,model3_sem9)
+    ```
 
-summary(mlog)
-summary(mlog.sem27)
-```
+    A remoção da observação 9 não teve impactos relevantes nos coeficientes dos dois modelos parcimoniosos e também não causou mudança inferencial, uma vez que as variáveis imposto, área construída e área do terreno permaneceram igualmente significativas nos respectivos modelos;
 
-```{r}
-model = lm(preco~imposto+areaT)
-summary(model)
-qqPlot(model)
-residualPlot(model)
-```
+-   Observação i=10:
 
-```{r}
-plot(cooks.distance(modelp), pch = 16, lwd = 3,
-     main = "Distância de Cook x Observação")
+    ```{r}
+    model2_sem10 = lm(preco~imposto+areaC,dados,subset=-10)
+    impacto(model2,model2_sem10)
 
-cut = 2*3/27
-plot(hatvalues(modelp), pch = 16,
-     xlab = "observação", ylab = "medida h", main = "Alavancagem")
-abline(h = cut, col = "red", lty = 2)
-```
+    model3_sem10 = lm(preco~imposto+areaT,dados,subset=-10)
+    impacto(model3,model3_sem10)
+    ```
 
-```{r}
-modelp.sem27 = lm(log(preco)~imposto+areaC,dados, subset = -27)
-(modelp$coefficients - modelp.sem27$coefficients)/modelp$coefficients * 100
+    A remoção da observação 10 não causou impactos relevantes nos coeficientes do primeiro modelo parcimonioso e também não ocasionou mudança inferencial, tendo as variáveis imposto e área construída mantido seus níveis de significância. Já no segundo modelo parcimonioso, a remoção da observação 10 ocasionou uma mudança inferencial, uma vez que a variável área de terreno perde sua significância;
 
-summary(modelp)
-summary(modelp.sem27)
-```
+-   Observação i=27:
 
-```{r}
-gamma = glm(preco~areaC+imposto,dados, family = Gamma(link="identity"))
-resumo = summary(gamma)
-resumo
-```
+    ```{r}
+    model2_sem27 = lm(preco~imposto+areaC,dados,subset=-27)
+    impacto(model2,model2_sem27)
 
-```{r}
-shape = gamma.shape(gamma)
+    model3_sem27 = lm(preco~imposto+areaT,dados,subset=-27)
+    impacto(model3,model3_sem27)
+    ```
 
-desvio_escal = resumo$deviance * shape$alpha
+    A remoção da observação 27 impactou em mudança inferencial nos dois modelos parcimoniosos. Enquanto que no primeiro, a significância da variável área construída é reduzida, no segundo, a variável área do terreno perde completamente sua significância.
 
-nivel_descrit = 1 - pchisq(desvio_escal,24)
+<br>
 
-nivel_descrit
+Como o segundo modelo parcimonioso não nos trouxe nenhuma melhoria para o ajuste e as conclusões sobre os pontos de influência não favoreceram a permanência da variável área do terreno, optaremos pelo primeiro modelo parcimonioso com as variáveis imposto e área construída sugerido inicialmente pelo critério de seleção de Akaike.
 
-fit.model = gamma
-source("envel_gama")
-source("diag_gama")
+A partir dos gráficos de resíduos por valores ajustados, de distância de Cook e de alavancagem, podemos fazer as seguintes classificações:
 
-```
+-   Ponto aberrante: observação 10;
 
-```{r}
+-   Pontos de alavanca: observações 9, 10 e 27;
 
-```
+-   Ponto influente: observação 27.
 
-```{r}
-gamma.sem27 = glm(preco~areaC+imposto,dados, subset=-27,
-                  family = Gamma(link="identity"))
-(gamma$coefficients - gamma.sem27$coefficients)/gamma$coefficients * 100
+<br>
 
-summary(gamma)
-summary(gamma.sem27)
-```
+## Interpretação
 
-```{r}
-mlog.sem9 = lm(log(preco)~imposto+areaC,dados, subset = -9)
-(mlog$coefficients - mlog.sem9$coefficients)/mlog$coefficients * 100
+Então, concluímos que
 
-summary(mlog)
-summary(mlog.sem9)
-```
+$$
+preço_i = 0.79 + 2.30*imposto_i + 13.93*areaC_i \quad ,
+$$
+
+onde:
+
+-   A cada US\$ 100,00 acrescidos no valor de imposto, aumenta-se, em média, US\$ 2.300,00 no preço de venda;
+
+-   A cada 1.000 metros quadrados de área construída acrescidos, aumenta-se, em média, US\$ 13.930,00 no preço de venda.
