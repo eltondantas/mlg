@@ -40,11 +40,11 @@ em que os erros $e_i$ são variáveis aleatórias independentes, normalmente dis
 
 <br>
 
-## Previsão do Preço de Venda de Imóveis
+## 1. Preço de Venda de Imóveis
 
 ### Dados
 
-Exemplo disponível em: Paula, G. A. (2013). [Modelos de Regressão com Apoio Computacional](https://www.ime.usp.br/~giapaula/texto_2013.pdf). São Paulo, SP: IME-USP. (Exercício 23, página 112). Dados disponíveis em: <https://www.ime.usp.br/~giapaula/textoregressao.htm>
+Exemplo disponível em: Paula, G. A. (2013). [Modelos de Regressão com Apoio Computacional](https://www.ime.usp.br/~giapaula/texto_2013.pdf). São Paulo, SP: IME-USP. (Exercício 23, página 112). Dados disponíveis em: [\<https://www.ime.usp.br/\~giapaula/textoregressao.htm\>](https://www.ime.usp.br/~giapaula/textoregressao.htm){.uri}, arquivo ***imoveis.dat***.
 
 Neste exemplo, vamos modelar o preço de venda de imóveis a partir de dados relativos a uma amostra de 27 imóveis. As variáveis do conjunto de dados são:
 
@@ -346,3 +346,263 @@ onde:
 -   A cada US\$ 100,00 acrescidos no valor de imposto, aumenta-se, em média, US\$ 2.300,00 no preço de venda;
 
 -   A cada 1.000 metros quadrados de área construída acrescidos, aumenta-se, em média, US\$ 13.930,00 no preço de venda.
+
+<br>
+
+# II. Modelo Gama
+
+## 1. Tempo de Vida de Pacientes com Leucemia
+
+### Dados
+
+Exemplo disponível em: Paula, G. A. (2013). [Modelos de Regressão com Apoio Computacional](https://www.ime.usp.br/~giapaula/texto_2013.pdf). São Paulo, SP: IME-USP. (Exercício 23, página 182). Dados disponíveis em: [\<https://www.ime.usp.br/\~giapaula/textoregressao.htm\>](https://www.ime.usp.br/~giapaula/textoregressao.htm){.uri}, arquivo ***sobrev.dat***.
+
+O conjunto de dados a seguir refere-se à classificação de pacientes com leucemia segundo a ausência ou presença de uma característica morfológica nas células brancas. Os pacientes classificados de AG positivo foram aqueles identificados com a presença dessa característica e os pacientes classificados em AG negativo os que não apresentaram. O conjunto de dados também inclui o tempo de sobrevivência do paciente (em semanas) após o diagnóstico da doença e o número de células brancas (WBC) no momento do diagnóstico.
+
+Variáveis:
+
+-   ***WBC***: número de células brancas no momento do diagnóstico;
+
+-   ***TEMPO***: tempo de sobrevivência do paciente (em semanas) após o diagnóstico da doença;
+
+-   ***AG***: 0 em caso da ausência da característica e 1 em caso da presença.
+
+Supondo que o tempo de sobrevivência após o diagnóstico segue uma distribuição gama, vamos propor um modelo para explicar o tempo médio de sobrevivência dados $log(WBC)$ e AG (= 1 se positivo, = 0 se negativo).
+
+Denotaremos por $T_{ij}$ o tempo de sobrevivência do i-ésimo paciente com a j-ésima classificação, $i = 1,…,33$ e $j = 1,2$.
+
+```{r}
+# Obtendo os dados
+dados = read.csv("dados/sobrev.csv")
+dados$AG = factor(dados$AG)
+attach(dados)
+```
+
+<br>
+
+### Análise Descritiva
+
+Médias estimadas para o tempo de sobrevivência, considerando o fator AG:
+
+```{r}
+# AG Negativo
+dados_ag0 = dados %>% filter(AG==0)
+mean(dados_ag0$TEMPO)
+
+# AG Positivo
+dados_ag1 = dados %>% filter(AG==1)
+mean(dados_ag1$TEMPO)
+```
+
+A partir da diferença entre as médias amostrais acima, podemos supor que os pacientes com o fator AG positivo sobreviveram por mais tempo que aqueles com fator AG negativo.
+
+<br>
+
+Coeficientes de variação do tempo de sobrevivência, considerando o fator AG:
+
+```{r}
+# Tempo, AG = 0
+sd(dados_ag0$TEMPO)/mean(dados_ag0$TEMPO) * 100
+
+# Tempo, AG = 1
+sd(dados_ag1$TEMPO)/mean(dados_ag1$TEMPO) * 100
+```
+
+<br>
+
+#### Box-plots
+
+Ignorando o fator AG, temos o seguinte boxplot:
+
+```{r}
+plot_ly(type = "box", y = TEMPO, name = "TEMPO", color = I("slategray"))
+```
+
+Considerando o fator AG, temos os seguintes boxplots:
+
+```{r}
+plot_ly(type = "box",
+        y = TEMPO, x = AG, name = AG,
+        color = AG, colors = c("darkred","darkgreen")) %>% 
+  layout(title = "TEMPO x AG")
+```
+
+Os gráficos de box-plot evidenciam a assimetria na distribuição da variável tempo de sobrevivência e também apontam a presença de um outlier entre os indivíduos com fator AG negativo. Esse outlier corresponde ao paciente que, mesmo com o fator AG negativo, conseguiu sobreviver a 65 semanas. Nos dados, esse paciente é a 19ª observação.
+
+<br>
+
+#### Densidades, Dispersões e Correlações
+
+Ignorando o fator AG, temos a seguinte densidade aproximada do tempo de sobrevivência:
+
+```{r}
+ggplot(dados,aes(x=TEMPO)) +
+  geom_density(fill = "slategray", color ="slategray",lwd = 1, alpha = 0.5) +
+  ggtitle("Densidade: TEMPO") +
+  theme_bw()
+```
+
+Considerando o fator AG, temos as seguintes dispersões, densidades e correlações:
+
+```{r}
+g = ggpairs(dados[c("WBC","TEMPO")],
+            aes(color = AG),
+            lower = list(continuous = wrap("smooth",col="black")),
+            diag = list(continuous = wrap("densityDiag", alpha = 0.5, size = 1)))
+ggplotly(g)
+```
+
+De maneira geral, percebemos uma correlação fraca de -0,33 entre as variáveis WBC e TEMPO. Considerando o fator AG, a correlação é praticamente nula no caso de AG negativo e moderada no caso de AG positivo. Em outras palavras, na presença da característica morfológica, o tempo de sobrevivência tende a diminuir conforme o número de celulas brancas aumentam.
+
+<br>
+
+### Ajuste
+
+Supondo que $T_{ij}$ são variáveis aleatórias independentes tais que $T_{ij} \sim Gama(\mu_{ij},\phi)$ e que $g(\mu_{ij}) = \eta_{ij}$, com $\eta_{ij} = \bf{x}_{ij}^\top\beta$, $\bf{x}_{ij}^\top$ contendo os valores das variáveis explicativas $log(WBC)$ e $AG$, e $\beta$ o vetor de parâmetros.
+
+Assumimos que $T_{ij}$ segue uma distribuição Gama de média $\mu_i$ e parâmetro de dispersão $\phi^{-1}$. Vamos, então, propor um modelo cuja parte sistemática é dada por
+
+$$
+\log(\mu_{ij}) = \alpha + \gamma_j + \beta\log(WBC_{ij}) \; ,
+$$
+
+em que $\gamma_{1} = 0$.
+
+#### Modelo com Ligação Logarítmica
+
+```{r}
+model1 = glm(TEMPO ~ log(WBC) + AG, dados, family = Gamma(link = "log"))
+resumo = summary(model1)
+resumo
+```
+
+Para o modelo obtido, ao nível de 5% de significância, as variáveis log(WBC) e AG são significativas.
+
+```{r}
+shape = MASS::gamma.shape(model1)
+
+desvio_escal = resumo$deviance * shape$alpha
+nivel_descrit = 1 - pchisq(desvio_escal, model1$df.residual)
+nivel_descrit
+```
+
+Também ao nível de 5% de significância, não rejeitamos a hipótese de que o modelo seja adequado.
+
+<br>
+
+#### Seleção de Variáveis
+
+```{r}
+MASS::stepAIC(model1)
+```
+
+Pelo critério de seleção de Akaike, devemos manter as duas variáveis no modelo.
+
+<br>
+
+### Diagnóstico
+
+#### Envelope
+
+```{r}
+# ENVELOPE
+fit.model = model1
+source("envel_gama")
+```
+
+Pelo gráfico de envelope, verificamos que todos os pontos se encontram dentro das bandas.
+
+```{r}
+par(mfrow=c(2,2))
+# RESÍDUOS STUDENTIZADOS
+residualPlot(model1, type = "deviance", id = TRUE,
+             ylab = "res. compon. do desvio", xlab = "valor ajustado",
+             pch = 16, smooth = F)
+abline(h = c(-2,2), col="red")
+
+# VARIÁVEL Z
+w = model1$weights
+eta = model1$linear.predictors
+z = eta + resid(fit.model, type="pearson")/sqrt(w)
+plot(model1$linear.predictors, z,
+     xlab = "Preditor Linear", ylab = "Variável z", pch = 16)
+
+# ALAVANCAGEM
+cut = min(sort(hatvalues(model1), decreasing = TRUE)[1:3])
+plot(hatvalues(model1), pch = 16,
+     xlab = "observação", ylab = "medida h", main = "Alavancagem")
+text(hatvalues(model1) * as.integer(hatvalues(model1) >= cut),
+     cex=0.8, p=1, offset=0.3)
+
+# DISTÂNCIA DE COOK
+plot(model1, which=4, lwd=3, main = "Distância de Cook", caption = F)
+```
+
+No gráfico de resíduos por valores ajustados, percebemos uma boa distribuição dos pontos no intervalo de -2 a 2. Embora seja perceptível também um afunilamento à direita, a quantidade de pontos nessa região não é suficiente para indicar que seja uma tendência. Não há presença de pontos aberrantes, uma vez que todos os pontos estão dentro ou muito próximo do intervalo de -2 a 2. A observação 33 fica em evidência no gráfico de distância de Cook, mas não a consideraremos para análise uma vez que a distância não é expressiva em escala. No gráfico de alavancagem, a observação 2 se destaca e, sendo assim, investigaremos sua possível influência na qualidade do ajuste.
+
+<br>
+
+#### Pontos Influentes
+
+```{r}
+summary(influence.measures(model1))
+```
+
+As medidas de influência acima apontam apenas para a observação 2 como possível ponto influente.
+
+<br>
+
+#### Impacto das remoções das observações
+
+```{r}
+model1_sem2 = glm(TEMPO ~ log(WBC) + AG, dados, subset = -2,
+                   family = Gamma(link = "log"))
+impacto(model1, model1_sem2)
+```
+
+Ao nível de 5% de significância, verificamos que a variável log(WBC) deixa de ser significativa quando removemos a observação 2. Sendo assim, ela causa mudança infefrencial e classifica-se como ponto de alavanca e influente.
+
+<br>
+
+### Interpretação
+
+Com essa análise, chegamos ao seguinte modelo para explicar o tempo médio de sobrevivência:
+
+$$
+\begin{aligned}
+\log(\mu_{i1}) &= 5.8 - 0.3\log(WBC_{i1}) \; ; \\
+\log(\mu_{i2}) &= 6.8 - 0.3\log(WBC_{i2}) \; .
+\end{aligned}
+$$
+
+Fixando-se o fator $\gamma_{j}$, temos que
+
+$$
+\frac{\mu_{j}(x+1)}{\mu_{j}(x)} = \frac{\exp{(5.8+ \gamma_j -0.3(x+1))}}{\exp{(5.8 + \gamma_j - 0.3x)}}
+=\exp{(-0.3)
+= 0.74} \; .
+$$
+
+Alterando-se o fator $\gamma_j$, temos que
+
+$$
+\frac{\mu_{i2}}{\mu_{i1}} = \frac{\exp{(5.8 + \gamma_2 - 0.3X_{i2})}}{\exp{(5.8 + \gamma_1 - 0.3X_{i1})}}
+= \exp{(\gamma_2)}
+= 2.72
+$$
+
+De onde concluímos que, ao fixarmos o fator característica morfológica, o acréscimo de 1 unidade à variável $\log(WBC)$ representa, em média, uma redução de 26% do tempo de sobrevivência. Já considerando a característica morfológica, o fato do paciente apresentá-la representa um aumento médio de 172% no tempo de sobrevivência.
+
+<br>
+
+# III. Modelo para Dados Binários
+
+## 1.  Dose-Resposta
+
+### Dados
+
+Os conjuntos de dados apresentados a seguir são provenientes de um experimento dose-resposta, conduzido para avaliar a influência dos extratos vegetais "aquoso frio de folhas", "aquoso frio de frutos" e um extrato químico, respectivamente, na morte de um determinado tipo de caramujo. Para cada conjunto, ajuste um modelo logístico linear simples e um modelo log-log linear simples. Para o melhor ajuste, usando envelope como critério, encontre um intervalo assintótico de 95% para a dose letal $DL_{50}$, contrua as bandas de confiança e verifique se há indícios de sobredispersão aplicando um teste apropriado.
+
+```{r}
+
+```
