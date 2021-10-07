@@ -640,19 +640,19 @@ dose3
 ```{r}
 p1 = ggplot(dose1, aes(x = dose, y = prop.mort)) +
   geom_col(fill = "darkred") +
-  ylab("proporção") +
+  ylab("prop. mortos") +
   labs(title = "Extrato Aquoso Frio de Folhas") +
   theme_bw()
 
 p2 = ggplot(dose2, aes(x = dose, y = prop.mort)) +
   geom_col(fill = "darkred") +
-  ylab("proporção") +
+  ylab("prop. mortos") +
   labs(title = "Extrato Aquoso Frio de Frutos") +
   theme_bw()
 
 p3 = ggplot(dose3, aes(x = dose, y = prop.mort)) +
   geom_col(fill = "darkred") +
-  ylab("proporção") +
+  ylab("prop. mortos") +
   labs(title = "Extrato Químico") +
   theme_bw()
 
