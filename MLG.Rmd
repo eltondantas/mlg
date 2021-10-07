@@ -724,7 +724,7 @@ summary(cloglog3)
 1 - pchisq(cloglog3$deviance, cloglog3$df.residual)
 ```
 
-#### Envelopes
+### 1.4 Envelopes
 
 ***Extrato Aquoso Frio de Folhas:***
 
@@ -762,7 +762,7 @@ ntot = dose3$expostos
 source("envelr_bino_cloglog.txt")
 ```
 
-#### Curvas Logísticas Ajustadas
+### 1.5 Curvas Logísticas Ajustadas
 
 ```{r}
 pi_log1 = exp(log1$coeff[1] + log1$coeff[2] * dose1$dose) /
@@ -835,7 +835,7 @@ plot_grid(p_log1,p_cloglog1,
           p_log3,p_cloglog3, ncol = 2)
 ```
 
-### 1.4 Dose Letal ($DL_{50}$) para os Modelos Log Linear Simples
+### 1.6 Dose Letal ($DL_{50}$) para os Modelos Log Linear Simples
 
 ```{r}
 # DOSE LETAL ESTIMATIVA PONTUAL
@@ -844,7 +844,7 @@ DL_100p = function(model,p){
 }
 
 
-# DOSE LETAL ESTIMATIVA INTERVALAR
+# DOSE LETAL ESTIMATIVA INTERVALAR, 95% DE CONFIANÇA
 DL_IC_log = function(model, p, gama){
   db = cbind(-1/model$coeff[2],
              1/(model$coeff[2]^2)*(model$coeff[1]-log(p/(1-p))))
