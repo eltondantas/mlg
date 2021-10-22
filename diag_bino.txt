@@ -40,19 +40,19 @@ b <- min(td)
 par(mfrow=c(2,2))
 plot(fitted(fit.model),h,xlab="Valor Ajustado", 
 ylab="Medida h", pch=16)
-#identify(fitted(fit.model), h, n=1)
+identify(fitted(fit.model), h, n=3)
 #
 plot(di,xlab="Índice", ylab="Distância de Cook",pch=16)
-#identify(di, n=1)
+identify(di, n=3)
 #
 plot(td,xlab="Índice", ylab="Resíduo Componente do Desvio",
 ylim=c(b-1,a+1), pch=16)
 abline(2,0,lty=2)
 abline(-2,0,lty=2)
-#identify(td, n=1)
+identify(td, n=3)
 #
 plot(fitted(fit.model), td,xlab="Valor Ajustado", 
 ylab="Resíduo Componente do Desvio", pch=16)
-#identify(fitted(fit.model), td, n=1)
+identify(fitted(fit.model), td, n=3)
 par(mfrow=c(1,1))
 #------------------------------------------------------------#
