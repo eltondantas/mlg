@@ -26,6 +26,7 @@ library(GGally)
 library(car)
 library(gridExtra)
 library(cowplot)
+library(DescTools)
 ```
 
 <br>
@@ -516,6 +517,7 @@ Pelo gráfico de envelope, verificamos que todos os pontos se encontram dentro d
 
 ```{r}
 par(mfrow=c(2,2))
+
 # RESÍDUOS STUDENTIZADOS
 residualPlot(model1, type = "deviance", id = TRUE,
              ylab = "res. compon. do desvio", xlab = "valor ajustado",
@@ -525,7 +527,7 @@ abline(h = c(-2,2), col="red")
 # VARIÁVEL Z
 w = model1$weights
 eta = model1$linear.predictors
-z = eta + resid(fit.model, type="pearson")/sqrt(w)
+z = eta + resid(model1, type="pearson")/sqrt(w)
 plot(model1$linear.predictors, z,
      xlab = "Preditor Linear", ylab = "Variável z", pch = 16)
 
@@ -849,8 +851,8 @@ DL_IC_log = function(model, p, gama){
   db = cbind(-1/model$coeff[2],
              1/(model$coeff[2]^2)*(model$coeff[1]-log(p/(1-p))))
   
-  X = model.matrix(log_dose1)
-  w = log_dose1$weights
+  X = model.matrix(model)
+  w = model$weights
   W = diag(w)
   
   Var = db %*% solve(t(X) %*% W %*% X) %*% t(db)
@@ -872,3 +874,597 @@ data.frame(extrato = c("EAF de Folhas","EAF de Frutos", "E Químico"),
                   DL_IC_log(log2, 0.5, 0.95)[2],
                   DL_IC_log(log3, 0.5, 0.95)[2]))
 ```
+
+<br>
+
+## 2. Eficiência do Tratamento de Pacientes com Leucemia
+
+### 2.1 Dados
+
+Exemplo disponível em: Paula, G. A. (2013). [Modelos de Regressão com Apoio Computacional](https://www.ime.usp.br/~giapaula/texto_2013.pdf). São Paulo, SP: IME-USP. (Exercício 20, página 277). Dados disponíveis em: [\<https://www.ime.usp.br/\~giapaula/textoregressao.htm\>](https://www.ime.usp.br/~giapaula/textoregressao.htm){.uri}, arquivo ***leuc.dat***.
+
+Os dados a seguir referem-se a um estudo com 51 pacientes adultos, previamente diagnosticados com um tipo agudo de leucemia, e que receberam um tipo de tratamento. A eficiência ou não do tratamento foi verificada após um certo período. As variáveis em estudo são:
+
+-   ***idade (***$x_1$***)***: idade do paciente (em anos);
+
+-   ***mancha (***$x_2$***)***: mancha diferencial da doença (em %);
+
+-   ***infilt (***$x_3$***)***: infiltração na medula (em %);
+
+-   ***leuc (***$x_4$***):*** células com leucemia (em %);
+
+-   ***malig (***$x_5$***)***: malignidade da doença ($\times 10^3$);
+
+-   ***tmax (***$x_6$***)***: temperatura máxima pré-tratamento ($\times 10^\circ F$);
+
+-   ***trat (***$y$***)***: tratamento (0: não-satisfatório, 1: satisfatório).
+
+Consideremos o seguinte modelo logístico linear, para explicar a probabilidade de eficiência do tratamento a partir das seis primeiras variáveis explicativas acima:
+
+$$
+Y \sim Bernoulli(\pi(\mathbf{x}))
+$$
+
+$$
+\log \left\{ \frac{\pi(\mathbf{x})}{1-\pi(\mathbf{x})} \right\} = \beta_1 + \beta_2x_2 + ... + \beta_6x_6
+$$
+
+```{r}
+dados = read.table("dados/leuce.dat",
+                   col.names = c("idade","mancha","infilt",
+                                 "leuc","malig","tmax",
+                                 "trat","tvida","status"))
+dados$trat = factor(dados$trat)
+dados = dados[1:7]
+attach(dados)
+```
+
+#### Box-plots
+
+```{r}
+p1 = dados %>% ggplot(aes(x = trat, y = idade, fill = trat)) +
+  geom_boxplot() +
+  scale_fill_manual(values=c("#BC3C29", "#20854E")) +
+  ggtitle("idade x tratamento") +
+  theme(legend.position = "none")
+
+p2 = dados %>% ggplot(aes(x = trat, y = mancha, fill = trat)) +
+  geom_boxplot() +
+  scale_fill_manual(values=c("#BC3C29", "#20854E")) +
+  ggtitle("mancha diferencial x tratamento") +
+  theme(legend.position = "none")
+
+p3 = dados %>% ggplot(aes(x = trat, y = infilt, fill = trat)) +
+  geom_boxplot() +
+  scale_fill_manual(values=c("#BC3C29", "#20854E")) +
+  ggtitle("infiltração x tratamento") +
+  theme(legend.position = "none")
+
+p4 = dados %>% ggplot(aes(x = trat, y = leuc, fill = trat)) +
+  geom_boxplot() +
+  scale_fill_manual(values=c("#BC3C29", "#20854E")) +
+  ggtitle("células leucêmicas x tratamento") +
+  theme(legend.position = "none")
+
+p5 = dados %>% ggplot(aes(x = trat, y = malig, fill = trat)) +
+  geom_boxplot() +
+  scale_fill_manual(values=c("#BC3C29", "#20854E")) +
+  ggtitle("malignidade x tratamento") +
+  theme(legend.position = "none")
+
+p6 = dados %>% ggplot(aes(x = trat, y = tmax, fill = trat)) +
+  geom_boxplot() +
+  scale_fill_manual(values=c("#BC3C29", "#20854E")) +
+  ggtitle("temperatura máxima x tratamento") +
+  theme(legend.position = "none")
+
+grid.arrange(p1,p2,p3,p4,p5,p6)
+```
+
+Observando os box-plots acima, fica evidente que o tratamento foi mais eficaz em pacientes mais jovens e naqueles com maior porcentagem de células leucêmicas.
+
+<br>
+
+#### Correlograma
+
+```{r}
+corrplot::corrplot(cor(dados[1:6]),  method = "color", type = "lower",
+                   addCoef.col = "white", tl.col = "black")
+```
+
+Dentre as variáveis explicativas, o par ***mancha diferencial*** e ***infiltração na medula*** foi o único com alto grau de correlação. Então, vale estudar modelos considerando as duas individualmente junto as demais.
+
+<br>
+
+### 2.2 Modelo Logístico Linear
+
+#### Modelo Completo
+
+```{r}
+model = glm(trat ~ idade + mancha + infilt + leuc + malig + tmax,
+            family = binomial)
+summary(model)
+```
+
+Para o modelo com todas as variáveis fornecidas, mancha, infiltração e malignidade não foram significativas.
+
+<br>
+
+#### Seleção de Variáveis
+
+```{r}
+MASS::stepAIC(model)
+```
+
+No método stepwise AIC, as variáveis selecionadas foram ***idade***, ***infilt***, ***leuc*** e ***tmax***. Como ***infilt*** e ***mancha*** são fortemente correlacionadas, vamos testar também um modelo com ***mancha*** ao invés de ***infilt***.
+
+<br>
+
+#### Modelos Reduzidos
+
+```{r}
+# Com a variável INFILT
+modelr1 = glm(trat ~ idade + infilt + leuc + tmax, family = binomial)
+summary(modelr1)
+
+# Com a variável MANCHA
+modelr2 = glm(trat ~ idade + mancha + leuc + tmax, family = binomial)
+summary(modelr2)
+```
+
+Os modelo reduzido com a variável ***infilt*** quanto o com a variável ***mancha*** apresentam as mesmas estimativas aproximadas para os parâmetros. Também nos dois, essas variáveis permanecem não significativas. Adiante, estudaremos uma possível influência de pontos sobre a inferência do modelo e avaliaremos a remoção das variáveis.
+
+<br>
+
+#### Testes de Ajuste
+
+```{r}
+1 - pchisq(modelr1$deviance, modelr1$df.residual)
+1 - pchisq(modelr2$deviance, modelr2$df.residual)
+```
+
+Ao nível de 5% de significância, não rejeitamos a hipótese de que os modelos sejam adequados.
+
+<br>
+
+#### Envelopes
+
+```{r}
+fit.model = modelr1
+source("envel_bino.txt")
+
+fit.model = modelr2
+source("envel_bino.txt")
+```
+
+Pelos gráficos de envelope, temos que o modelo reduzido com a variável ***mancha*** ficou melhor ajustado e, então, o escolheremos para prosseguir nossa análise.
+
+<br>
+
+### 2.3 Diagnóstico
+
+```{r}
+par(mfrow=c(2,2))
+
+# ALAVANCAGEM
+cut = min(sort(hatvalues(modelr2), decreasing = TRUE)[1:3])
+plot(hatvalues(modelr2), pch = 16,
+     xlab = "observação", ylab = "medida h", main = "Alavancagem")
+text(hatvalues(modelr2) * as.integer(hatvalues(modelr2) >= cut),
+     cex=0.8, p=1, offset=0.4)
+
+# DISTÂNCIA DE COOK
+plot(modelr2, which=4, lwd=3, main = "Distância de Cook", caption = F)
+
+# RESÍDUO COMPONENTE DO DESVIO POR ÍNDICE
+plot(residuals(modelr2), pch = 16,
+     ylab = "res. compon. do desvio", xlab = "índice")
+abline(h = c(-2,2), col="red")
+```
+
+No gráfico de resíduo componente do desvio, verificamos que os pontos estão bem distribuídos aleatoriamente e sem nenhuma observação aberrante muito além dos limites de confiança. Nos gráficos de alavancagem e distância de Cook, destacam--se os pontos 2, 13, 32, 47 e 48. A seguir, verificaremos se há influência desses pontos sobre a inferência do modelo.
+
+<br>
+
+#### Pontos Influentes
+
+```{r}
+summary(influence.measures(modelr2))
+```
+
+#### Impacto dos Pontos Influentes
+
+***Observação 2***
+
+```{r}
+modelr2_sem2 = glm(trat ~ idade + mancha + leuc + tmax, subset = -2,
+                   family = binomial)
+impacto(modelr2, modelr2_sem2)[3:5]
+```
+
+A 5% de significância, removendo-se a observação 2, a variável ***idade*** deixa de ser significativa.
+
+<br>
+
+***Observação 13***
+
+```{r}
+modelr2_sem13 = glm(trat ~ idade + mancha + leuc + tmax, subset = -13,
+                   family = binomial)
+impacto(modelr2, modelr2_sem13)[3:5]
+```
+
+A 5% de significância, removendo-se a observação 13, não há mudança inferencial no modelo.
+
+<br>
+
+***Observação 32***
+
+```{r}
+modelr2_sem32 = glm(trat ~ idade + mancha + leuc + tmax, subset = -32,
+                   family = binomial)
+impacto(modelr2, modelr2_sem32)[3:5]
+```
+
+A 5% de significância, removendo-se a observação 32, a variável ***idade*** deixa de ser significativa.
+
+<br>
+
+***Observação 47***
+
+```{r}
+modelr2_sem47 = glm(trat ~ idade + mancha + leuc + tmax, subset = -47,
+                   family = binomial)
+impacto(modelr2, modelr2_sem47)[3:5]
+```
+
+A 5% de significância, removendo-se a observação 47, não há mudança inferencial no modelo.
+
+<br>
+
+Observação 48
+
+```{r}
+modelr2_sem48 = glm(trat ~ idade + mancha + leuc + tmax, subset = -48,
+                   family = binomial)
+impacto(modelr2, modelr2_sem48)[3:5]
+```
+
+A 5% de significância, removendo-se a observação 48, a variável ***idade*** deixa de ser significativa.
+
+<br>
+
+### 2.4 Modelo Logístico Linear -  Reajuste
+
+As variáveis ***mancha*** e ***infilt*** não foram significativas em nenhuma circustância vista anteriormente. Então, podemos considerar removê-las. Além disso, a variável ***idade*** deixou de ser significativa com a remoção de algumas observações. Então, testaremos a seguir dois modelos sem as variáveis ***mancha*** e ***infilt***: um com a variável ***idade*** e outro sem.
+
+```{r}
+# Com a variável IDADE
+modelr3 = glm(trat ~ idade + leuc + tmax, family = binomial)
+summary(modelr3)
+
+# Sem a variável IDADE
+modelr4 = glm(trat ~ leuc + tmax, family = binomial)
+summary(modelr4)
+```
+
+Em ambos os modelos, a 5% de significâncias, todas as variáveis são significativas.
+
+<br>
+
+#### Testes de Ajuste
+
+```{r}
+1 - pchisq(modelr3$deviance, modelr3$df.residual)
+1 - pchisq(modelr4$deviance, modelr4$df.residual)
+```
+
+Ao nível de 5% de significância, não rejeitamos a hipótese de que os modelos sejam adequados.
+
+<br>
+
+#### Envelopes
+
+```{r}
+fit.model = modelr3
+source("envel_bino.txt")
+
+fit.model = modelr4
+source("envel_bino.txt")
+```
+
+Pelos gráficos de envelope, temos que os dois modelos ficaram bem ajustados. Então, pelo princípio da parcimônia, optaremos pelo modelo sem a variável ***idade***.
+
+<br>
+
+#### Qualidade do Ajuste - Hosmer-Lemeshow
+
+```{r}
+HosmerLemeshowTest(fit=fitted(modelr4), trat, ngr=10, X=cbind(leuc, tmax))$gof
+```
+
+Pelo teste de Homser-Lemeshow, ao nível de 5% de significância, não rejeitamos a hipótese de bom ajuste do modelo.
+
+<br>
+
+### 2.5 Diagnóstico
+
+```{r}
+par(mfrow=c(2,2))
+
+# ALAVANCAGEM
+cut = min(sort(hatvalues(modelr4), decreasing = TRUE)[1:3])
+plot(hatvalues(modelr4), pch = 16,
+     xlab = "observação", ylab = "medida h", main = "Alavancagem")
+text(hatvalues(modelr4) * as.integer(hatvalues(modelr4) >= cut),
+     cex=0.8, p=1, offset=0.4)
+
+# DISTÂNCIA DE COOK
+plot(modelr4, which=4, lwd=3, main = "Distância de Cook", caption = F)
+
+# RESÍDUO COMPONENTE DO DESVIO POR ÍNDICE
+plot(residuals(modelr4), pch = 16,
+     ylab = "res. compon. do desvio", xlab = "índice")
+abline(h = c(-2,2), col="red")
+```
+
+<br>
+
+Pelo gráfico de resíduo componente do desvio, verificamos que os pontos estão bem distribuídos aleatoriamente no intervalo (-2,2) e sem pontos aberrantes para muito além dele. Nos gráficos de alavancagem e distância de Cook, destacam-se os pontos 2, 32, 40 e 42. Então, a seguir vamos verificar a se há influência desses pontos sobre a inferência do modelo.
+
+<br>
+
+#### Pontos Influentes
+
+```{r}
+summary(influence.measures(modelr4))
+```
+
+#### Impacto dos Pontos Influentes
+
+***Observação 2***
+
+```{r}
+modelr4_sem2 = glm(trat ~ leuc + tmax, subset = -2, family = binomial)
+impacto(modelr4, modelr4_sem2)[3:5]
+```
+
+A 5% de significância, removendo-se a observação 2, não há mudança inferencial no modelo.
+
+<br>
+
+***Observação 32***
+
+```{r}
+modelr4_sem32 = glm(trat ~ leuc + tmax, subset = -32, family = binomial)
+impacto(modelr4, modelr4_sem32)[3:5]
+```
+
+A 5% de significância, removendo-se a observação 32, não há mudança inferencial no modelo.
+
+<br>
+
+***Observação 40***
+
+```{r}
+modelr4_sem40 = glm(trat ~ leuc + tmax, subset = -40, family = binomial)
+impacto(modelr4, modelr4_sem40)[3:5]
+```
+
+A 5% de significância, removendo-se a observação 40, não há mudança inferencial no modelo.
+
+<br>
+
+***Observação 48***
+
+```{r}
+modelr4_sem48 = glm(trat ~ leuc + tmax, subset = -48, family = binomial)
+impacto(modelr4, modelr4_sem48)[3:5]
+```
+
+A 5% de significância, removendo-se a observação 48, não há mudança inferencial no modelo.
+
+<br>
+
+### 2.6 Interpretação
+
+Com essa análise, chegamos ao seguinte modelo para explicar a probabilidade de eficiência do tratamento:
+
+$$
+\log \left\{ \frac{\pi(\mathbf{x})}{1-\pi(\mathbf{x})} \right\} = 70.82 +
+0.34 \cdot leuc - 0.07 \cdot tmax \; .
+$$
+
+Como ilustração, ao fixarmos a temperatura máxima e considerarmos um aumento de 1% no número de células leucêmicas, a razão de chances de tratamento satisfatório, denotada por $\psi_{CL}$, é estimada em
+
+$$
+\psi_I = e^{0.34} = 1.40 \; .
+$$
+
+Isto significa que, sob uma mesma temperatura máxima, o aumento de 1% no número de células leucêmicas representa uma aumento de 40% na chance do tratamento ser satisfatório.
+
+<br>
+
+## 3. Taxa Anual de Câncer Nasal
+
+### 3.1 Dados
+
+Exemplo disponível em: Paula, G. A. (2013). [Modelos de Regressão com Apoio Computacional](https://www.ime.usp.br/~giapaula/texto_2013.pdf). São Paulo, SP: IME-USP. (Exercício 6, página 345). Dados disponíveis em: <https://www.ime.usp.br/~giapaula/textoregressao.htm>, arquivo ***canc1.dat***.
+
+Os dados a seguir são provenientes de um estudo de seguimento para estudar a associação entre a taxa anual de câncer nasal em trabalhadores de uma refinaria de níquel do País de Gales e algumas variáveis explicativas: ***idade*** no primeiro emprego (4 níveis), ***ano*** do primeiro emprego (4 níveis) e ***tempo*** decorrido desde o primeiro emprego (5 níveis). São também apresentados o ***número de casos*** de câncer nasal e o ***total*** de pessoas-anos para cada combinação desses três fatores. Nesse trabalho foi proposto um modelo log-linear com resposta de Poisson, sendo o número de casos de câncer nasal com ***offset*** dado por ***log(pessoas-anos)**.*
+
+As variáveis e suas classes:
+
+-   ***idade***: 1 (\<20), 2 (20-27), 3 (27.5 - 34.9), 4 (35+), em anos;
+
+-   ***ano***: 1 (\<1910), 2 (1910-1914), 3 (1915-1919), 4 (1920-1924), em anos;
+
+-   ***tempo***: 1 (0-19), 2 (20-29), 3 (30- 39), 4 (40-49), 5 (50+), em anos.
+
+<br>
+
+#### Box-plots
+
+```{r,include=FALSE}
+dados = read.table("dados/canc1.dat")
+                   
+d1 = dados[,1:5]; colnames(d1) = c("idade","ano","tempo","ncasos","total")
+d2 = dados[,6:10]; colnames(d2) = c("idade","ano","tempo","ncasos","total")
+d3 = dados[,11:15]; colnames(d3) = c("idade","ano","tempo","ncasos","total")
+
+dados = rbind(d1,d2,d3) %>% arrange(idade,ano,tempo)
+dados$idade = factor(dados$idade)
+dados$ano = factor(dados$ano)
+dados$tempo = factor(dados$tempo)
+
+attach(dados)
+```
+
+```{r,echo=FALSE}
+p1 = dados %>% ggplot(aes(x = idade, y = ncasos)) +
+  geom_boxplot(fill="#DF8F44") +
+  ggtitle("número de casos x idade") +
+  theme(legend.position = "none")
+
+p2 = dados %>% ggplot(aes(x = ano, y = ncasos)) +
+  geom_boxplot(fill="#B24745") +
+  ggtitle("número de casos x ano") +
+  theme(legend.position = "none")
+
+p3 = dados %>% ggplot(aes(x = tempo, y = ncasos)) +
+  geom_boxplot(fill="#6A6599") +
+  ggtitle("número de casos x tempo") +
+  theme(legend.position = "none")
+
+grid.arrange(p1,p2,p3)
+```
+
+<br>
+
+### 3.2 Modelo Log-linear de Resposta Poisson
+
+Denotamos por $Y_{ijk}$ o número de casos de câncer nasal para o i-ésimo nível de idade no primeiro emprego, para o j-ésimo ano do primeiro emprego e para o k-ésimo tempo decorrido desde o primeiro emprego, $i,j=1,...,4$ e $k=1,...,5$. Supomos, então, que
+
+$$
+Y_{ijk} \sim Poisson(\lambda_{ijk} t_{ijk}), 
+$$
+
+em que $\lambda_{ijk}$ é a taxa média de casos de câncer nasal por unidade de tempo para a idade i, ano j e tempo k. O modelo saturado, nesse caso, é dado por
+
+$$
+\log(\lambda_{ijk}t_{ijk}) = \alpha + \beta_i + \gamma_j + \delta_k, 
+$$
+
+em que $\beta_i$ é o efeito da i-ésima classe de idade no primeiro emprego, sendo $\beta_1 = 1(<20)$; $\gamma_j$ o efeito da j-ésima classe de ano do primeiro emprego, sendo $\gamma_1 = 1(<1910)$; $\delta_k$ o efeito da k-ésima classe de tempo decorrido desde o primeiro emprego, sendo $\delta_1 = 1(0-19)$.
+
+<br>
+
+#### Modelo Saturado
+
+```{r,echo=FALSE}
+model = glm(ncasos ~ idade + ano + tempo + offset(log(total)), family = poisson)
+summary(model)
+```
+
+#### Envelope
+
+```{r,echo=FALSE}
+fit.model = model
+source("envel_pois.txt")
+```
+
+<br>
+
+### 3.3 Diagnóstico
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+
+# ALAVANCAGEM
+cut = sort(hatvalues(model), decreasing = TRUE)[3]
+id = as.integer(hatvalues(model) >= cut)
+id[id==0] = NA
+plot(y = hatvalues(model), x = model$fitted.values, pch = 16,
+     xlab = "valor ajustado", ylab = "medida h", main = "Alavancagem")
+text(y = hatvalues(model)*id, x = model$fitted.values*id, cex=0.8, p=1, offset=0.2)
+
+# DISTÂNCIA DE COOK
+plot(model, which=4, lwd=3, main = "Distância de Cook", caption = F)
+
+# RESÍDUO COMPONENTE DO DESVIO POR ÍNDICE
+id = as.integer(resid(model,type="deviance") > 2|resid(model,type="deviance") < -2)
+id[id==0] = NA
+plot(resid(model,type = "deviance"), pch = 16, ylim=c(-2.5,2.5),
+     ylab = "res. compon. do desvio", xlab = "índice")
+abline(h = c(-2,2), col="red")
+text(resid(model,type="deviance")*id, cex=0.8, pos=1, offset=0.2)
+
+# VARIÁVEL Z
+w = model$weights
+eta = model$linear.predictors
+z = eta + resid(model, type="pearson")/sqrt(w)
+plot(model$linear.predictors, z,
+     xlab = "Preditor Linear", ylab = "Variável z", pch = 16)
+```
+
+Pelos gráficos acima, percebemos que as observações 62 e 63 se destacam nos gráficos de alavancagem e distância de Cook, caracterizando-se como pontos de alavanca e possíveis pontos de influência. A observação 52 se afasta um pouco do limite superior do intervalo de confiança para os resíduos componentes do desvio e será considerada como um ponto aberrante. A seguir, estudaremos a influência desses três pontos sobre o ajuste do modelo.
+
+<br>
+
+#### Pontos Influentes
+
+```{r,echo=FALSE}
+options(scipen=999)
+```
+
+Observação 52:
+
+```{r,echo=FALSE}
+model_sem52 = glm(ncasos ~ idade + ano + tempo + offset(log(total)),
+                  subset = -52, family = poisson)
+impacto(model, model_sem52)[,3:5]
+```
+
+Observação 62
+
+```{r,echo=FALSE}
+model_sem62 = glm(ncasos ~ idade + ano + tempo + offset(log(total)),
+                  subset = -62, family = poisson)
+impacto(model, model_sem62)[,3:5]
+```
+
+Observação 63:
+
+```{r,echo=FALSE}
+model_sem63 = glm(ncasos ~ idade + ano + tempo + offset(log(total)),
+                  subset = -63, family = poisson)
+impacto(model, model_sem63)[,3:5]
+```
+
+Ao nível de 5% de significância, nenhuma das remoções testadas acima ocasionou mudanças inferenciais nas estimativas dos parâmetros.
+
+<br>
+
+### 3.4 Interpretação
+
+Com essa análise, confirmamos o modelo saturado para explicar a taxa anual de casos de câncer nasal.
+
+$$
+\log(\lambda_{ijk}t_{ijk}) = \alpha + \beta_i + \gamma_j + \delta_k 
+$$
+
+```{r}
+resumo = summary(model)
+table = data.frame(Efeito = c("Constante","20-27","27.5-34.9","35+",
+                              "1910-1914","1915-1919","1920-1924",
+                              "20-29","30-39","40-49","50+"),
+                   Parametros = c("alfa",
+                                  "beta2","beta3","beta4",
+                                  "gama2","gama3","gama4",
+                                  "delta2","delta3","delta4","delta5"),
+                   Estimativa = resumo$coefficients[,1],
+                   E.Padrao = resumo$coefficients[,2])
+knitr::kable(table, "pipe")
+```
+
+Notamos, então, que as estimativas acima são significativamente diferentes de 0 e que há fortes indícios de que a taxa anual de câncer nasal cresce exponencialmente com o aumento da idade no primeiro emprego e o tempo decorrido desde o primeiro emprego, mas decresce exponencialmente com o aumento de anos do primeiro emprego.
